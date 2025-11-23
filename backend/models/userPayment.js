@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const paymentRecordSchema = new mongoose.Schema({
   monthNumber: {
@@ -57,6 +57,8 @@ const userPaymentSchema = new mongoose.Schema(
       type: String,
       required: [true, "Aadhar number is required"],
       match: [/^\d{12}$/, "Please enter a valid 12-digit Aadhar number"],
+      unique: true,
+      index: true, // Remove this line to fix duplicate index warning
     },
     phoneNumber: {
       type: String,
@@ -127,23 +129,76 @@ const userPaymentSchema = new mongoose.Schema(
   }
 );
 
+// Pre-save middleware to calculate derived fields
+userPaymentSchema.pre("save", function (next) {
+  // Calculate end date if not provided
+  if (this.startDate && this.tenure && !this.endDate) {
+    const endDate = new Date(this.startDate);
+    endDate.setMonth(endDate.getMonth() + this.tenure);
+    this.endDate = endDate;
+  }
+
+  // Calculate monthly premium if not provided
+  if (this.chitAmount && this.tenure && !this.monthlyPremium) {
+    this.monthlyPremium = this.chitAmount / this.tenure;
+  }
+
+  // Update summary fields based on payment records
+  const paidRecords = this.paymentRecords.filter(
+    (record) => record.status === "paid" || record.status === "partial"
+  );
+
+  this.completedMonths = paidRecords.length;
+  this.pendingMonths = this.tenure - this.completedMonths;
+  this.totalPaidAmount = paidRecords.reduce(
+    (total, record) => total + record.amount,
+    0
+  );
+
+  // Update last payment date
+  if (paidRecords.length > 0) {
+    const latestPayment = paidRecords.reduce((latest, record) =>
+      record.paymentDate > latest.paymentDate ? record : latest
+    );
+    this.lastPaymentDate = latestPayment.paymentDate;
+  }
+
+  // Update status based on completion
+  if (this.completedMonths >= this.tenure) {
+    this.status = "completed";
+  }
+
+  next();
+});
+
 // Method to get payment summary
 userPaymentSchema.methods.getPaymentSummary = function () {
   const paidRecords = this.paymentRecords.filter(
     (record) => record.status === "paid" || record.status === "partial"
   );
-  const pendingRecords = this.paymentRecords.filter(
-    (record) => record.status === "pending" || record.status === "overdue"
-  );
 
   return {
     totalMonths: this.tenure,
-    completedMonths: paidRecords.length,
-    pendingMonths: pendingRecords.length,
+    completedMonths: this.completedMonths,
+    pendingMonths: this.pendingMonths,
     totalPaidAmount: this.totalPaidAmount,
     totalDueAmount: this.tenure * this.monthlyPremium - this.totalPaidAmount,
-    completionPercentage: ((paidRecords.length / this.tenure) * 100).toFixed(2),
+    completionPercentage: ((this.completedMonths / this.tenure) * 100).toFixed(
+      2
+    ),
+    nextDueMonth: this.completedMonths + 1,
+    nextDueAmount: this.monthlyPremium,
   };
 };
 
-module.exports = mongoose.model("UserPayment", userPaymentSchema);
+// Static method to find by Aadhar number
+userPaymentSchema.statics.findByAadhar = function (aadharNumber) {
+  return this.findOne({ aadharNumber });
+};
+
+// Index for better query performance - Remove duplicate definitions
+// userPaymentSchema.index({ aadharNumber: 1 }); // Keep only this one
+userPaymentSchema.index({ status: 1 });
+userPaymentSchema.index({ createdAt: -1 });
+
+export default mongoose.model("UserPayment", userPaymentSchema);

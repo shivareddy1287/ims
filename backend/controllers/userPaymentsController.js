@@ -1,21 +1,19 @@
-const UserPayment = require("../models/userPayment.js");
+import UserPayment from "../models/userPayment.js";
 
+// @desc    Create new user payment account
+// @route   POST /api/user-payments
+// @access  Public
 const createUserPayment = async (req, res) => {
-  console.log("t");
   try {
-    console.log("t2");
-
-    // Calculate derived fields before creating the document
     const data = { ...req.body };
 
-    // Calculate end date
+    // Calculate derived fields before creating the document
     if (data.startDate && data.tenure && !data.endDate) {
       const endDate = new Date(data.startDate);
       endDate.setMonth(endDate.getMonth() + data.tenure);
       data.endDate = endDate;
     }
 
-    // Calculate monthly premium if not provided
     if (data.chitAmount && data.tenure && !data.monthlyPremium) {
       data.monthlyPremium = data.chitAmount / data.tenure;
     }
@@ -27,11 +25,7 @@ const createUserPayment = async (req, res) => {
     data.lastPaymentDate = null;
 
     const userPayment = new UserPayment(data);
-    console.log("t3");
-
-    // Remove the pre-save middleware temporarily to test
     const savedUserPayment = await userPayment.save();
-    console.log("t4");
 
     res.status(201).json({
       success: true,
@@ -39,6 +33,13 @@ const createUserPayment = async (req, res) => {
       data: savedUserPayment,
     });
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: "Aadhar number already exists",
+      });
+    }
+
     res.status(400).json({
       success: false,
       message: error.message,
@@ -51,11 +52,21 @@ const createUserPayment = async (req, res) => {
 // @access  Public
 const getAllUserPayments = async (req, res) => {
   try {
-    const { status, page = 1, limit = 10, aadharNumber } = req.query;
+    const { status, page = 1, limit = 10, aadharNumber, search } = req.query;
 
     let query = {};
     if (status) query.status = status;
     if (aadharNumber) query.aadharNumber = aadharNumber;
+
+    // Search functionality
+    if (search) {
+      query.$or = [
+        { memberName: { $regex: search, $options: "i" } },
+        { aadharNumber: { $regex: search, $options: "i" } },
+        { phoneNumber: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
+    }
 
     const userPayments = await UserPayment.find(query)
       .sort({ createdAt: -1 })
@@ -198,7 +209,7 @@ const recordPayment = async (req, res) => {
 
       return {
         monthNumber,
-        amount: amount / monthNumbers.length, // Divide amount equally among months
+        amount: amount / monthNumbers.length,
         paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
         dueDate,
         status: "paid",
@@ -234,7 +245,7 @@ const recordPayment = async (req, res) => {
 // @access  Public
 const recordBulkPayment = async (req, res) => {
   try {
-    const { payments } = req.body; // payments: [{monthNumber, amount, paymentDate, ...}]
+    const { payments } = req.body;
 
     const userPayment = await UserPayment.findById(req.params.id);
     if (!userPayment) {
@@ -337,6 +348,7 @@ const getPaymentHistory = async (req, res) => {
         pendingPayments,
         totalPaid: paidPayments.length,
         totalPending: pendingPayments.length,
+        summary: userPayment.getPaymentSummary(),
       },
     });
   } catch (error) {
@@ -405,7 +417,7 @@ const deleteUserPayment = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   createUserPayment,
   getAllUserPayments,
   getUserPaymentById,

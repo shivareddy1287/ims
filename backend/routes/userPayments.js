@@ -1,6 +1,5 @@
-const express = require("express");
-const router = express.Router();
-const {
+import express from "express";
+import {
   createUserPayment,
   getAllUserPayments,
   getUserPaymentById,
@@ -10,7 +9,9 @@ const {
   getPaymentHistory,
   updateUserPayment,
   deleteUserPayment,
-} = require("../controllers/userPaymentsController");
+} from "../controllers/userPaymentsController.js";
+
+const router = express.Router();
 
 router.post("/", createUserPayment);
 router.get("/", getAllUserPayments);
@@ -22,4 +23,4 @@ router.get("/:id/payment-history", getPaymentHistory);
 router.put("/:id", updateUserPayment);
 router.delete("/:id", deleteUserPayment);
 
-module.exports = router;
+export default router;
