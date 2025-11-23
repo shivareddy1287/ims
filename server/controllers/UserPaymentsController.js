@@ -391,7 +391,7 @@
 //   updateUserPayment,
 //   deleteUserPayment,
 // };
-const UserPayment = require("../models/UserPayment.js");
+const UserPayment = require("../models/userPayment.js");
 
 // @desc    Create a new user payment account
 // @route   POST /api/user-payments
