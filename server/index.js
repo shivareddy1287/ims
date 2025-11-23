@@ -2,7 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const UserPaymentsRoute = require("./routes/userPaymentRoutes");
-
+const fs = require("fs");
+const path = require("path");
 // Load env vars
 dotenv.config();
 
@@ -26,6 +27,12 @@ app.get("/", (req, res) => {
     version: "1.0.0",
   });
 });
+
+// Check if route file exists
+const routePath = path.join(__dirname, "routes", "userPaymentRoutes.js");
+console.log("Route file exists:", fs.existsSync(routePath));
+console.log("Current directory:", __dirname);
+console.log("Files in routes directory:");
 
 app.use("/api/user-payments", UserPaymentsRoute);
 
