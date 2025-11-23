@@ -6,7 +6,7 @@ const UserPaymentsRoute = require("./routes/userPaymentRoutes");
 // Load env vars
 dotenv.config();
 
-// Connect to database
+// Connect to databasee
 const connectDB = require("./config/database");
 connectDB();
 
