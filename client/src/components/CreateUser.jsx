@@ -6,15 +6,10 @@ const CreateUser = () => {
     memberName: "",
     aadharNumber: "",
     phoneNumber: "",
-    email: "",
-    address: {
-      street: "",
-      city: "",
-      state: "",
-      pincode: "",
-    },
+    address: "", // Changed from object to string
     chitAmount: "",
     tenure: "",
+    tenureType: "week", // Added tenure type with default value "week"
     startDate: new Date().toISOString().split("T")[0],
   });
   const [loading, setLoading] = useState(false);
@@ -22,22 +17,10 @@ const CreateUser = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
-    if (name.includes(".")) {
-      const [parent, child] = name.split(".");
-      setFormData((prev) => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent],
-          [child]: value,
-        },
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -57,15 +40,10 @@ const CreateUser = () => {
           memberName: "",
           aadharNumber: "",
           phoneNumber: "",
-          email: "",
-          address: {
-            street: "",
-            city: "",
-            state: "",
-            pincode: "",
-          },
+          address: "",
           chitAmount: "",
           tenure: "",
+          tenureType: "week",
           startDate: new Date().toISOString().split("T")[0],
         });
       }
@@ -152,21 +130,6 @@ const CreateUser = () => {
                 placeholder="10-digit phone number"
               />
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address *
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                placeholder="Enter email address"
-              />
-            </div>
           </div>
 
           {/* Address Information */}
@@ -174,62 +137,18 @@ const CreateUser = () => {
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Address Information
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Street Address
-                </label>
-                <input
-                  type="text"
-                  name="address.street"
-                  value={formData.address.street}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="Enter street address"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  City
-                </label>
-                <input
-                  type="text"
-                  name="address.city"
-                  value={formData.address.city}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="Enter city"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  State
-                </label>
-                <input
-                  type="text"
-                  name="address.state"
-                  value={formData.address.state}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="Enter state"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  PIN Code
-                </label>
-                <input
-                  type="text"
-                  name="address.pincode"
-                  value={formData.address.pincode}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="Enter PIN code"
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Full Address
+              </label>
+              <textarea
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                rows={3}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                placeholder="Enter complete address including street, city, state, and PIN code"
+              />
             </div>
           </div>
 
@@ -257,18 +176,33 @@ const CreateUser = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tenure (Months) *
+                  Tenure *
                 </label>
-                <input
-                  type="number"
-                  name="tenure"
-                  value={formData.tenure}
-                  onChange={handleChange}
-                  required
-                  min="1"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="e.g., 12"
-                />
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <input
+                      type="number"
+                      name="tenure"
+                      value={formData.tenure}
+                      onChange={handleChange}
+                      required
+                      min="1"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="e.g., 12"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <select
+                      name="tenureType"
+                      value={formData.tenureType}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    >
+                      <option value="week">Weeks</option>
+                      <option value="month">Months</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
               <div>
