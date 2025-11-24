@@ -9,13 +9,22 @@ const UpcomingPayments = () => {
   const [loading, setLoading] = useState(true);
   const [recordingPayment, setRecordingPayment] = useState(null);
 
+  // New state for financial summary
+  const [financialSummary, setFinancialSummary] = useState({
+    totalCollected: 0,
+    totalDue: 0,
+    remainingToCollect: 0,
+    collectionRate: 0,
+  });
+
   useEffect(() => {
     fetchUsers();
   }, []);
 
   useEffect(() => {
     filterUpcomingPayments();
-  }, [users, paymentType, currentDate]);
+    calculateFinancialSummary();
+  }, [users, paymentType, currentDate, filteredUsers]);
 
   const fetchUsers = async () => {
     try {
@@ -29,6 +38,41 @@ const UpcomingPayments = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Calculate financial summary for current period
+  const calculateFinancialSummary = () => {
+    let totalCollected = 0;
+    let totalDue = 0;
+    let paidCount = 0;
+
+    filteredUsers.forEach((user) => {
+      const periodNumber = getCurrentPeriodNumber(user);
+      const paymentRecord = getPaymentRecordForPeriod(user, periodNumber);
+      const userPremium = user.monthlyPremium || 0;
+
+      totalDue += userPremium;
+
+      if (paymentRecord) {
+        if (paymentRecord.status === "paid") {
+          totalCollected += userPremium;
+          paidCount++;
+        } else if (paymentRecord.status === "partial") {
+          totalCollected += paymentRecord.amount;
+          paidCount += paymentRecord.amount / userPremium; // Partial count
+        }
+      }
+    });
+
+    const remainingToCollect = totalDue - totalCollected;
+    const collectionRate = totalDue > 0 ? (totalCollected / totalDue) * 100 : 0;
+
+    setFinancialSummary({
+      totalCollected,
+      totalDue,
+      remainingToCollect,
+      collectionRate: Math.round(collectionRate),
+    });
   };
 
   // Get Sunday of the current week
@@ -81,14 +125,13 @@ const UpcomingPayments = () => {
     start.setHours(0, 0, 0, 0);
     const startSunday = getSundayOfWeek(start);
 
-    // If start date is after the calculated start Sunday, use the next Sunday
     if (start > startSunday) {
       startSunday.setDate(startSunday.getDate() + 7);
     }
 
     const diffTime = currentSunday - startSunday;
     const diffWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
-    return diffWeeks + 1; // Week numbers start from 1
+    return diffWeeks + 1;
   };
 
   // Calculate month number from start date
@@ -100,7 +143,7 @@ const UpcomingPayments = () => {
     const diffMonths =
       (currentFirst.getFullYear() - startFirst.getFullYear()) * 12 +
       (currentFirst.getMonth() - startFirst.getMonth());
-    return diffMonths + 1; // Month numbers start from 1
+    return diffMonths + 1;
   };
 
   // Check if user should pay for current period
@@ -108,21 +151,15 @@ const UpcomingPayments = () => {
     if (paymentType === "week") {
       const currentSunday = getSundayOfWeek(currentDate);
       const weekNumber = getWeekNumber(user.startDate, currentSunday);
-
-      // Check if this week is within tenure and after start date
       const isValidWeek = weekNumber >= 1 && weekNumber <= user.tenure;
       const hasStarted = currentSunday >= new Date(user.startDate);
-
       return isValidWeek && hasStarted;
     } else {
       const currentFirst = getFirstOfMonth(currentDate);
       const monthNumber = getMonthNumber(user.startDate, currentFirst);
-
-      // Check if this month is within tenure and after start date
       const isValidMonth = monthNumber >= 1 && monthNumber <= user.tenure;
       const hasStarted =
         currentFirst >= getFirstOfMonth(new Date(user.startDate));
-
       return isValidMonth && hasStarted;
     }
   };
@@ -181,12 +218,12 @@ const UpcomingPayments = () => {
       const nextSunday = new Date(sunday);
       nextSunday.setDate(sunday.getDate() + 6);
 
-      return `Week: ${sunday.toLocaleDateString()}`;
+      return `Week: ${sunday.toLocaleDateString()} `;
     } else {
       const first = getFirstOfMonth(currentDate);
       const last = new Date(first.getFullYear(), first.getMonth() + 1, 0);
 
-      return `Month: ${first.toLocaleDateString("en-US", {
+      return `${first.toLocaleDateString("en-US", {
         month: "long",
         year: "numeric",
       })} (1st - ${last.getDate()}${getOrdinalSuffix(last.getDate())})`;
@@ -230,10 +267,7 @@ const UpcomingPayments = () => {
       const response = await userPaymentAPI.recordPayment(userId, paymentData);
 
       if (response.data.success) {
-        // Refresh the list
         await fetchUsers();
-
-        // Show success message
         alert(
           `Payment recorded successfully for ${user.memberName} - ${
             paymentType === "week" ? "Week" : "Month"
@@ -275,9 +309,7 @@ const UpcomingPayments = () => {
       const response = await userPaymentAPI.recordPayment(userId, paymentData);
 
       if (response.data.success) {
-        // Refresh the list
         await fetchUsers();
-
         alert(`Partial payment of ₹${amount} recorded for ${user.memberName}`);
       }
     } catch (error) {
@@ -355,38 +387,45 @@ const UpcomingPayments = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex justify-center items-center min-h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-emerald-600 mx-auto"></div>
+          <p className="text-gray-600 mt-4 font-medium">
+            Loading payment data...
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 p-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-4xl font-bold text-gray-900">
             Payment Collection
           </h1>
-          <p className="text-gray-600 mt-2">
+          <p className="text-gray-600 mt-2 text-lg">
             Complete payment management system
           </p>
         </div>
         <button
           onClick={fetchUsers}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+          className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white px-6 py-3 rounded-xl hover:from-emerald-700 hover:to-emerald-800 transition-all duration-300 shadow-lg hover:shadow-xl flex items-center space-x-3 font-semibold group"
         >
-          <span>🔄</span>
-          <span>Refresh</span>
+          <span className="group-hover:rotate-180 transition-transform duration-500">
+            🔄
+          </span>
+          <span>Refresh Data</span>
         </button>
       </div>
 
       {/* Payment Type Filter and Navigation */}
-      <div className="bg-white rounded-xl shadow-sm border p-4">
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-          <div className="w-full md:w-48">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="bg-white rounded-2xl shadow-lg border border-emerald-100 p-6">
+        <div className="flex flex-col lg:flex-row gap-6 items-center justify-between">
+          <div className="w-full lg:w-64">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
               Payment Type
             </label>
             <select
@@ -395,7 +434,7 @@ const UpcomingPayments = () => {
                 setPaymentType(e.target.value);
                 setCurrentDate(new Date());
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300 bg-white hover:border-gray-400"
             >
               <option value="week">Weekly (Sunday)</option>
               <option value="month">Monthly (1st)</option>
@@ -403,16 +442,16 @@ const UpcomingPayments = () => {
           </div>
 
           <div className="flex-1 text-center">
-            <div className="text-lg font-semibold text-gray-900">
+            <div className="text-xl font-bold text-gray-900">
               {getCurrentPeriodDisplay()}
             </div>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-600 mt-1">
               Collection day:{" "}
               {paymentType === "week" ? "Sunday" : "1st of the month"}
               {!isCurrentPeriod() && (
                 <span
-                  className={`ml-2 ${
-                    isPastPeriod() ? "text-red-600" : "text-orange-600"
+                  className={`ml-2 font-semibold ${
+                    isPastPeriod() ? "text-red-600" : "text-amber-600"
                   }`}
                 >
                   ({isPastPeriod() ? "Past Period" : "Future Period"})
@@ -421,82 +460,157 @@ const UpcomingPayments = () => {
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3">
             <button
               onClick={goToPrevious}
-              className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+              className="bg-gray-600 text-white px-4 py-3 rounded-xl hover:bg-gray-700 transition-all duration-300 shadow-sm flex items-center space-x-2"
             >
-              ◀ Prev
+              <span>◀</span>
+              <span>Prev</span>
             </button>
             <button
               onClick={goToToday}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              className="bg-emerald-600 text-white px-4 py-3 rounded-xl hover:bg-emerald-700 transition-all duration-300 shadow-sm flex items-center space-x-2"
             >
-              Today
+              <span>📅</span>
+              <span>Today</span>
             </button>
             <button
               onClick={goToNext}
-              className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+              className="bg-gray-600 text-white px-4 py-3 rounded-xl hover:bg-gray-700 transition-all duration-300 shadow-sm flex items-center space-x-2"
             >
-              Next ▶
+              <span>Next</span>
+              <span>▶</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Payment Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl shadow-sm border p-4 text-center">
-          <div className="text-2xl font-bold text-gray-900">
-            {filteredUsers.length}
+      {/* Financial Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Total Due */}
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-blue-100 text-sm font-semibold">Total Due</p>
+              <p className="text-3xl font-bold mt-2">
+                ₹{financialSummary.totalDue.toLocaleString()}
+              </p>
+              <p className="text-blue-100 text-sm mt-1">
+                {filteredUsers.length} members
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+              <span className="text-2xl">💰</span>
+            </div>
           </div>
-          <div className="text-sm text-gray-600">Total Due</div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border p-4 text-center">
-          <div className="text-2xl font-bold text-green-600">
-            {
-              filteredUsers.filter((user) => getPaymentStatus(user) === "paid")
-                .length
-            }
+
+        {/* Collected Amount */}
+        <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-emerald-100 text-sm font-semibold">
+                Collected
+              </p>
+              <p className="text-3xl font-bold mt-2">
+                ₹{financialSummary.totalCollected.toLocaleString()}
+              </p>
+              <p className="text-emerald-100 text-sm mt-1">
+                {financialSummary.collectionRate}% collected
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+              <span className="text-2xl">✅</span>
+            </div>
           </div>
-          <div className="text-sm text-gray-600">Paid</div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border p-4 text-center">
-          <div className="text-2xl font-bold text-red-600">
-            {
-              filteredUsers.filter(
-                (user) => getPaymentStatus(user) === "unpaid"
-              ).length
-            }
+
+        {/* Remaining to Collect */}
+        <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-amber-100 text-sm font-semibold">Remaining</p>
+              <p className="text-3xl font-bold mt-2">
+                ₹{financialSummary.remainingToCollect.toLocaleString()}
+              </p>
+              <p className="text-amber-100 text-sm mt-1">Yet to collect</p>
+            </div>
+            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+              <span className="text-2xl">⏳</span>
+            </div>
           </div>
-          <div className="text-sm text-gray-600">Unpaid</div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border p-4 text-center">
-          <div className="text-2xl font-bold text-blue-600">
-            {filteredUsers.length > 0
-              ? Math.round(
-                  (filteredUsers.filter(
-                    (user) => getPaymentStatus(user) === "paid"
-                  ).length /
-                    filteredUsers.length) *
-                    100
-                )
-              : 0}
-            %
+
+        {/* Collection Rate */}
+        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-purple-100 text-sm font-semibold">
+                Collection Rate
+              </p>
+              <p className="text-3xl font-bold mt-2">
+                {financialSummary.collectionRate}%
+              </p>
+              <p className="text-purple-100 text-sm mt-1">Success rate</p>
+            </div>
+            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+              <span className="text-2xl">📊</span>
+            </div>
           </div>
-          <div className="text-sm text-gray-600">Collection Rate</div>
+        </div>
+      </div>
+
+      {/* Progress Bar for Collection */}
+      <div className="bg-white rounded-2xl shadow-lg border border-emerald-100 p-6">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-sm font-semibold text-gray-700">
+            Collection Progress
+          </span>
+          <span className="text-sm font-bold text-emerald-600">
+            {financialSummary.collectionRate}% Complete
+          </span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-4">
+          <div
+            className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-4 rounded-full transition-all duration-1000 shadow-sm"
+            style={{ width: `${financialSummary.collectionRate}%` }}
+          ></div>
+        </div>
+        <div className="flex justify-between text-xs text-gray-500 mt-2">
+          <span>₹0</span>
+          <span>₹{financialSummary.totalDue.toLocaleString()}</span>
         </div>
       </div>
 
       {/* Payments List */}
-      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-        {filteredUsers.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            <div className="text-6xl mb-4">
-              {paymentType === "week" ? "📅" : "📊"}
+      <div className="bg-white rounded-2xl shadow-lg border border-emerald-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-emerald-100 bg-gradient-to-r from-emerald-50 to-white">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center space-x-3">
+              <span className="w-2 h-8 bg-emerald-500 rounded-full"></span>
+              <span>
+                {paymentType === "week" ? "Weekly" : "Monthly"} Payments (
+                {filteredUsers.length} members)
+              </span>
+            </h2>
+            <div className="text-sm font-semibold text-emerald-600 bg-emerald-100 px-3 py-1.5 rounded-full">
+              {financialSummary.collectionRate}% Collected
             </div>
-            <p className="text-lg">No payments due for this period</p>
-            <p className="text-sm mt-1">
+          </div>
+        </div>
+
+        {filteredUsers.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <span className="text-4xl">
+                {paymentType === "week" ? "📅" : "📊"}
+              </span>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              No Payments Due
+            </h3>
+            <p className="text-gray-600 max-w-md mx-auto">
               {paymentType === "week"
                 ? "No weekly payments due for this week"
                 : "No monthly payments due for this month"}
@@ -505,29 +619,26 @@ const UpcomingPayments = () => {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Member
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Member Details
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Contact
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Payment Info
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Payment Details
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Progress
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Payment History
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Action
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white divide-y divide-gray-100">
                 {filteredUsers.map((user) => {
                   const periodNumber = getCurrentPeriodNumber(user);
                   const paymentHistory = getPaymentHistory(user);
@@ -544,132 +655,108 @@ const UpcomingPayments = () => {
                   return (
                     <tr
                       key={user._id}
-                      className={`hover:bg-gray-50 transition-colors ${
-                        status === "paid" ? "bg-green-50" : "bg-red-50"
-                      }`}
+                      className="hover:bg-emerald-50/50 transition-all duration-300 group"
                     >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                            <span className="text-blue-600 font-semibold">
-                              {user.memberName?.charAt(0) || "U"}
-                            </span>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center space-x-4">
+                          <div className="relative">
+                            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-md">
+                              <span className="text-white font-semibold text-sm">
+                                {user.memberName?.charAt(0) || "U"}
+                              </span>
+                            </div>
                           </div>
                           <div>
-                            <div className="text-sm font-medium text-gray-900">
+                            <div className="font-semibold text-gray-900 group-hover:text-emerald-700 transition-colors">
                               {user.memberName}
                             </div>
-                            <div className="text-sm text-gray-500">
-                              Started:{" "}
-                              {new Date(user.startDate).toLocaleDateString()}
+                            <div className="text-sm text-gray-500 flex items-center space-x-2 mt-1">
+                              <span>📱 {user.phoneNumber}</span>
+                              <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                              <span>🆔 {user.aadharNumber}</span>
                             </div>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {user.phoneNumber}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          Aadhar: {user.aadharNumber}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          ₹{user.monthlyPremium}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {paymentType === "week" ? "Week" : "Month"}{" "}
-                          {periodNumber} of {user.tenure}
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          Due: {paymentType === "week" ? "Sunday" : "1st"}
+                      <td className="px-6 py-5">
+                        <div className="space-y-2">
+                          <div className="font-semibold text-gray-900 text-lg">
+                            ₹{user.monthlyPremium?.toLocaleString()}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            {paymentType === "week" ? "Week" : "Month"}{" "}
+                            {periodNumber} of {user.tenure}
+                          </div>
+                          <div className="text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-1 rounded-full inline-block">
+                            Due: {paymentType === "week" ? "Sunday" : "1st"}
+                          </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-wrap gap-1 max-w-xs">
-                          {paymentHistory.slice(0, 12).map((period, index) => (
+                      <td className="px-6 py-5">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="font-medium text-gray-700">
+                              {paidPeriods.length}/{user.tenure} paid
+                            </span>
+                            <span className="font-semibold text-emerald-600">
+                              {progressPercentage}%
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2.5">
                             <div
-                              key={index}
-                              className={`w-6 h-6 rounded text-xs flex items-center justify-center ${
-                                period.periodNumber === periodNumber
-                                  ? "bg-blue-500 text-white"
-                                  : period.status === "paid"
-                                  ? "bg-green-500 text-white"
-                                  : period.status === "partial"
-                                  ? "bg-yellow-500 text-white"
-                                  : "bg-gray-300 text-gray-600"
-                              }`}
-                              title={`${
-                                paymentType === "week" ? "Week" : "Month"
-                              } ${period.periodNumber}: ${
-                                period.status === "paid"
-                                  ? "Paid"
-                                  : period.status === "partial"
-                                  ? "Partial"
-                                  : "Unpaid"
-                              }`}
-                            >
-                              {period.periodNumber}
-                            </div>
-                          ))}
-                          {paymentHistory.length > 12 && (
-                            <div className="text-xs text-gray-500">
-                              +{paymentHistory.length - 12} more
+                              className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-2.5 rounded-full transition-all duration-500 shadow-sm"
+                              style={{ width: `${progressPercentage}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="space-y-2">
+                          <span
+                            className={`inline-flex items-center space-x-1 px-3 py-1.5 rounded-full text-xs font-semibold ${
+                              status === "paid"
+                                ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                                : "bg-red-100 text-red-800 border border-red-200"
+                            }`}
+                          >
+                            <span>{status === "paid" ? "✅" : "❌"}</span>
+                            <span>{status === "paid" ? "Paid" : "Unpaid"}</span>
+                            {currentPayment?.status === "partial" && (
+                              <span>(Partial)</span>
+                            )}
+                          </span>
+                          {currentPayment?.status === "partial" && (
+                            <div className="text-xs text-amber-600 font-medium">
+                              Paid: ₹{currentPayment.amount} of ₹
+                              {user.monthlyPremium}
                             </div>
                           )}
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {paidPeriods.length}/{user.tenure} paid
-                        </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            status === "paid"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {status === "paid" ? "Paid" : "Unpaid"}
-                          {currentPayment?.status === "partial" && " (Partial)"}
-                        </span>
-                        <div className="text-xs text-gray-500 mt-1">
-                          Total Paid: ₹{user.totalPaidAmount || 0}
-                        </div>
-                        {currentPayment?.status === "partial" && (
-                          <div className="text-xs text-yellow-600 mt-1">
-                            Paid: ₹{currentPayment.amount} of ₹
-                            {user.monthlyPremium}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <td className="px-6 py-5">
                         {status === "unpaid" && (
                           <div className="flex flex-col space-y-2">
                             <button
                               onClick={() => handleRecordPayment(user._id)}
                               disabled={recordingPayment === user._id}
-                              className="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center space-x-1"
+                              className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white px-4 py-2.5 rounded-xl hover:from-emerald-700 hover:to-emerald-800 disabled:opacity-50 transition-all duration-300 shadow-sm hover:shadow-md flex items-center space-x-2 font-semibold"
                             >
                               {recordingPayment === user._id ? (
                                 <>
-                                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                                   <span>Processing...</span>
                                 </>
                               ) : (
                                 <>
                                   <span>💳</span>
-                                  <span>
-                                    Mark Paid (₹{user.monthlyPremium})
-                                  </span>
+                                  <span>Mark Paid</span>
                                 </>
                               )}
                             </button>
                           </div>
                         )}
                         {status === "paid" && (
-                          <span className="text-green-600 flex items-center space-x-1">
+                          <span className="text-emerald-600 flex items-center space-x-2 font-semibold">
                             <span>✅</span>
                             <span>Collected</span>
                           </span>

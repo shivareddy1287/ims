@@ -39,3 +39,25 @@ textarea:focus {
     display: none !important;
   }
 }
+
+:root {
+  /* Main brand colors */
+  --primary: #2563eb; /* Blue */
+  --primary-light: #3b82f6;
+  --primary-dark: #1e40af;
+
+  /* Secondary brand color */
+  --secondary: #9333ea; /* Purple */
+  --secondary-light: #a855f7;
+  --secondary-dark: #7e22ce;
+
+  /* Accent / success / warning / error */
+  --success: #10b981; /* Green */
+  --warning: #f59e0b; /* Amber */
+  --error: #ef4444; /* Red */
+
+  /* Neutral UI colors */
+  --background: #f9fafb;
+  --foreground: #111827;
+  --border: #e5e7eb;
+}

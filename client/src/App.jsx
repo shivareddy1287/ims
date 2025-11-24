@@ -14,7 +14,7 @@ function App() {
       case "dashboard":
         return <Dashboard />;
       case "create":
-        return <CreateUser />;
+        return <CreateUser setActiveTab={setActiveTab} />;
       case "users":
         return <UserList />;
       case "payments":
