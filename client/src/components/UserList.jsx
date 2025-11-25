@@ -157,7 +157,7 @@ const UserList = () => {
 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-6 text-white shadow-lg">
+        <div className="bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-2xl p-6 text-white shadow-lg">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-emerald-100 text-sm font-semibold">
@@ -338,6 +338,8 @@ const UserList = () => {
                   const completedMonths = getCompletedMonths(user);
                   const progressPercentage = getProgressPercentage(user);
 
+                  console.log("sss", user.status);
+
                   return (
                     <tr
                       key={user._id}
@@ -423,15 +425,19 @@ const UserList = () => {
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => handleDeleteUser(user._id)}
-                            className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all duration-300 hover:scale-110 group"
-                            title="Delete Member"
-                          >
-                            <span className="text-lg group-hover:scale-110 transition-transform">
-                              🗑️
-                            </span>
-                          </button>
+                          {user.status === "completed" ? (
+                            <button
+                              onClick={() => handleDeleteUser(user._id)}
+                              className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all duration-300 hover:scale-110 group"
+                              title="Delete Member"
+                            >
+                              <span className="text-lg group-hover:scale-110 transition-transform">
+                                🗑️
+                              </span>
+                            </button>
+                          ) : (
+                            ""
+                          )}
                         </div>
                       </td>
                     </tr>

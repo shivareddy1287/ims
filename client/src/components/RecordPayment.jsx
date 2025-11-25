@@ -236,7 +236,7 @@ const UpcomingPayments = () => {
       const nextSunday = new Date(sunday);
       nextSunday.setDate(sunday.getDate() + 6);
 
-      return `Week: ${sunday.toLocaleDateString()} - ${nextSunday.toLocaleDateString()}`;
+      return `Week: ${sunday.toLocaleDateString()} `;
     } else {
       const first = getFirstOfMonth(currentDate);
       const last = new Date(first.getFullYear(), first.getMonth() + 1, 0);

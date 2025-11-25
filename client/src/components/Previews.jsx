@@ -113,7 +113,12 @@ const Previews = () => {
     });
   };
 
-  const filterUsersByCompletionDate = (users, startDate, endDate) => {
+  const filterUsersByCompletionDate = (
+    users,
+    startDate,
+    endDate,
+    tenureInp
+  ) => {
     return users.filter((user) => {
       // For completion, check if the user's end date falls within the week
       if (user.status !== "completed") return false;
@@ -129,7 +134,11 @@ const Previews = () => {
       filterStart.setHours(0, 0, 0, 0);
       filterEnd.setHours(23, 59, 59, 999);
 
-      return userEndDate >= filterStart && userEndDate <= filterEnd;
+      return (
+        userEndDate >= filterStart &&
+        userEndDate <= filterEnd &&
+        user?.tenureType === tenureInp
+      );
     });
   };
 
@@ -145,7 +154,12 @@ const Previews = () => {
     if (activeTab === "weekly-start") {
       filteredData = filterUsersByStartDate(users, weekStart, weekEnd, "week");
     } else if (activeTab === "weekly-completion") {
-      filteredData = filterUsersByCompletionDate(users, weekStart, weekEnd);
+      filteredData = filterUsersByCompletionDate(
+        users,
+        weekStart,
+        weekEnd,
+        "week"
+      );
     }
 
     setWeeklyData(filteredData);
@@ -168,7 +182,12 @@ const Previews = () => {
         "month"
       );
     } else if (activeTab === "monthly-completion") {
-      filteredData = filterUsersByCompletionDate(users, monthStart, monthEnd);
+      filteredData = filterUsersByCompletionDate(
+        users,
+        monthStart,
+        monthEnd,
+        "month"
+      );
     }
 
     setMonthlyData(filteredData);
@@ -482,51 +501,6 @@ const Previews = () => {
                 </div>
               )}
             </>
-          )}
-
-          {/* Summary */}
-          {!loading && currentData.length > 0 && (
-            <div className="mt-6 pt-6 border-t">
-              <div className="bg-emerald-50 rounded-lg p-4">
-                <h4 className="font-semibold text-emerald-800 mb-2">Summary</h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <span className="text-emerald-600">Total Records:</span>
-                    <p className="font-semibold text-emerald-800">
-                      {currentData.length}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-emerald-600">Total Amount:</span>
-                    <p className="font-semibold text-emerald-800">
-                      ₹
-                      {currentData
-                        .reduce((sum, user) => sum + (user.chitAmount || 0), 0)
-                        .toLocaleString()}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-emerald-600">Weekly Plans:</span>
-                    <p className="font-semibold text-emerald-800">
-                      {
-                        currentData.filter((user) => user.tenureType === "week")
-                          .length
-                      }
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-emerald-600">Monthly Plans:</span>
-                    <p className="font-semibold text-emerald-800">
-                      {
-                        currentData.filter(
-                          (user) => user.tenureType === "month"
-                        ).length
-                      }
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
           )}
         </div>
       </div>
