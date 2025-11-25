@@ -69,26 +69,26 @@ function App() {
     //   <main className="container mx-auto px-4 py-8">{renderContent()}</main>
     // </div>
 
-    // <div className="min-h-screen bg-gradient-to-br from-green-400 via-emerald-400 via-lime-400 via-teal-400 via-green-500 via-emerald-500 via-lime-300 via-teal-300 via-green-300 to-green-400">
-    //   {/* Your content */}
-    //   <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
-    //   <main className="container mx-auto px-4 py-8">{renderContent()}</main>
-    // </div>
-
-    <div
-      className="min-h-screen"
-      style={{
-        backgroundImage:
-          "url('https://res.cloudinary.com/dzrc9ejln/image/upload/v1764046321/Gemini_Generated_Image_x7uecox7uecox7ue_yimyd1.png')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-      }}
-    >
+    <div className="min-h-screen bg-gradient-to-br from-green-400 via-emerald-400 via-lime-400 via-teal-400 via-green-500 via-emerald-500 via-lime-300 via-teal-300 via-green-300 to-green-400">
       {/* Your content */}
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
       <main className="container mx-auto px-4 py-8">{renderContent()}</main>
     </div>
+
+    // <div
+    //   className="min-h-screen"
+    //   style={{
+    //     backgroundImage:
+    //       "url('https://res.cloudinary.com/dzrc9ejln/image/upload/v1764046321/Gemini_Generated_Image_x7uecox7uecox7ue_yimyd1.png')",
+    //     backgroundSize: "cover",
+    //     backgroundPosition: "center",
+    //     backgroundRepeat: "no-repeat",
+    //   }}
+    // >
+    //   {/* Your content */}
+    //   <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
+    //   <main className="container mx-auto px-4 py-8">{renderContent()}</main>
+    // </div>
   );
 }
 
