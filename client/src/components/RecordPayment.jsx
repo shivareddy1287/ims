@@ -78,7 +78,7 @@ const UpcomingPayments = () => {
   // Get Sunday of the current week
   const getSundayOfWeek = (date) => {
     const sunday = new Date(date);
-    sunday.setDate(date.getDate() - date.getDay());
+    sunday.setDate(date.getDate() - date.getDay()); // Sunday is day 0
     sunday.setHours(0, 0, 0, 0);
     return sunday;
   };
@@ -119,19 +119,32 @@ const UpcomingPayments = () => {
     setCurrentDate(new Date());
   };
 
-  // Calculate week number from start date
-  const getWeekNumber = (startDate, currentSunday) => {
+  // Calculate week number from start date - FIXED LOGIC
+  const getWeekNumber = (startDate, currentDate) => {
     const start = new Date(startDate);
     start.setHours(0, 0, 0, 0);
+
+    const current = new Date(currentDate);
+    current.setHours(0, 0, 0, 0);
+
+    // Get the Sunday of the start date week
     const startSunday = getSundayOfWeek(start);
 
+    // If start date is after the Sunday of its week, move to next Sunday
     if (start > startSunday) {
       startSunday.setDate(startSunday.getDate() + 7);
     }
 
+    // Get the Sunday of the current date week
+    const currentSunday = getSundayOfWeek(current);
+
+    // Calculate difference in milliseconds
     const diffTime = currentSunday - startSunday;
+
+    // Convert to weeks
     const diffWeeks = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
-    return diffWeeks + 1;
+
+    return diffWeeks + 1; // Week numbers start from 1
   };
 
   // Calculate month number from start date
@@ -146,13 +159,19 @@ const UpcomingPayments = () => {
     return diffMonths + 1;
   };
 
-  // Check if user should pay for current period
+  // Check if user should pay for current period - FIXED LOGIC
   const shouldPayForPeriod = (user) => {
     if (paymentType === "week") {
       const currentSunday = getSundayOfWeek(currentDate);
-      const weekNumber = getWeekNumber(user.startDate, currentSunday);
+      const weekNumber = getWeekNumber(user.startDate, currentDate);
+
+      // Check if week number is valid (between 1 and tenure)
       const isValidWeek = weekNumber >= 1 && weekNumber <= user.tenure;
-      const hasStarted = currentSunday >= new Date(user.startDate);
+
+      // Check if the current period has started (current Sunday >= start date Sunday)
+      const startSunday = getSundayOfWeek(new Date(user.startDate));
+      const hasStarted = currentSunday >= startSunday;
+
       return isValidWeek && hasStarted;
     } else {
       const currentFirst = getFirstOfMonth(currentDate);
@@ -167,8 +186,7 @@ const UpcomingPayments = () => {
   // Get current period number for user
   const getCurrentPeriodNumber = (user) => {
     if (paymentType === "week") {
-      const currentSunday = getSundayOfWeek(currentDate);
-      return getWeekNumber(user.startDate, currentSunday);
+      return getWeekNumber(user.startDate, currentDate);
     } else {
       const currentFirst = getFirstOfMonth(currentDate);
       return getMonthNumber(user.startDate, currentFirst);
@@ -218,7 +236,7 @@ const UpcomingPayments = () => {
       const nextSunday = new Date(sunday);
       nextSunday.setDate(sunday.getDate() + 6);
 
-      return `Week: ${sunday.toLocaleDateString()} `;
+      return `Week: ${sunday.toLocaleDateString()} - ${nextSunday.toLocaleDateString()}`;
     } else {
       const first = getFirstOfMonth(currentDate);
       const last = new Date(first.getFullYear(), first.getMonth() + 1, 0);
@@ -255,13 +273,9 @@ const UpcomingPayments = () => {
       const paymentData = {
         monthNumbers: [periodNumber],
         amount: user.monthlyPremium,
-        paymentDate: new Date().toISOString().split("T")[0],
+
         paymentMethod: "cash",
         status: "paid",
-        dueDate:
-          paymentType === "week"
-            ? getSundayOfWeek(currentDate).toISOString().split("T")[0]
-            : getFirstOfMonth(currentDate).toISOString().split("T")[0],
       };
 
       const response = await userPaymentAPI.recordPayment(userId, paymentData);
@@ -420,7 +434,6 @@ const UpcomingPayments = () => {
           <span>Refresh Data</span>
         </button>
       </div>
-
       {/* Payment Type Filter and Navigation */}
       <div className="bg-white rounded-2xl shadow-lg border border-emerald-100 p-6">
         <div className="flex flex-col lg:flex-row gap-6 items-center justify-between">
@@ -485,7 +498,6 @@ const UpcomingPayments = () => {
           </div>
         </div>
       </div>
-
       {/* Financial Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Total Due */}
@@ -560,7 +572,6 @@ const UpcomingPayments = () => {
           </div>
         </div>
       </div>
-
       {/* Progress Bar for Collection */}
       <div className="bg-white rounded-2xl shadow-lg border border-emerald-100 p-6">
         <div className="flex items-center justify-between mb-3">
@@ -674,6 +685,10 @@ const UpcomingPayments = () => {
                               <span>📱 {user.phoneNumber}</span>
                               <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
                               <span>🆔 {user.aadharNumber}</span>
+                            </div>
+                            <div className="text-xs text-gray-400 mt-1">
+                              Start:{" "}
+                              {new Date(user.startDate).toLocaleDateString()}
                             </div>
                           </div>
                         </div>

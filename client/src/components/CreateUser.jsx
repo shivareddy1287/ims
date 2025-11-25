@@ -11,16 +11,132 @@ const CreateUser = ({ setActiveTab }) => {
     tenure: "",
     tenureType: "week",
     startDate: new Date().toISOString().split("T")[0],
+    reference: "",
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
 
+  // Function to check if a date is Sunday
+  const isSunday = (dateString) => {
+    const date = new Date(dateString);
+    return date.getDay() === 0; // 0 is Sunday
+  };
+
+  // Function to get next available Sunday from a given date
+  const getNextSunday = (fromDate = new Date()) => {
+    const date = new Date(fromDate);
+    const day = date.getDay();
+    const daysUntilSunday = 7 - day;
+    date.setDate(date.getDate() + daysUntilSunday);
+    return date.toISOString().split("T")[0];
+  };
+
+  // Function to calculate end date based on start date, tenure and tenure type
+  const calculateEndDate = (startDate, tenure, tenureType) => {
+    const start = new Date(startDate);
+    const end = new Date(start);
+
+    if (tenureType === "week") {
+      end.setDate(start.getDate() + parseInt(tenure) * 7 - 7);
+    } else if (tenureType === "month") {
+      end.setMonth(start.getMonth() + parseInt(tenure) - 1);
+    }
+
+    return end.toISOString().split("T")[0];
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
+    let updatedFormData = {
+      ...formData,
       [name]: value,
-    }));
+    };
+
+    // If tenure type is week and startDate is being changed, validate it's a Sunday
+    if (name === "startDate" && formData.tenureType === "week" && value) {
+      if (!isSunday(value)) {
+        // Auto-correct to next Sunday
+        updatedFormData.startDate = getNextSunday(value);
+        setMessage({
+          type: "info",
+          text: "Start date automatically adjusted to next Sunday for weekly tenure.",
+        });
+      } else {
+        setMessage({ type: "", text: "" });
+      }
+    }
+
+    // Recalculate endDate when startDate, tenure, or tenureType changes
+    if (name === "startDate" || name === "tenure" || name === "tenureType") {
+      if (updatedFormData.startDate && updatedFormData.tenure) {
+        updatedFormData.endDate = calculateEndDate(
+          updatedFormData.startDate,
+          updatedFormData.tenure,
+          updatedFormData.tenureType
+        );
+      }
+    }
+
+    // If tenure type changes, validate start date
+    if (name === "tenureType" && formData.startDate) {
+      if (value === "week" && !isSunday(formData.startDate)) {
+        updatedFormData.startDate = getNextSunday(formData.startDate);
+        setMessage({
+          type: "info",
+          text: "Start date automatically adjusted to next Sunday for weekly tenure.",
+        });
+      }
+    }
+
+    setFormData(updatedFormData);
+  };
+
+  // Custom date filter function for the date input
+  const handleDateInput = (e) => {
+    const selectedDate = e.target.value;
+
+    console.log(selectedDate, formData.tenure, formData.tenureType);
+
+    const endDt = calculateEndDate(
+      selectedDate,
+      formData.tenure,
+      formData.tenureType
+    );
+    setFormData({ ...formData, endDate: endDt });
+    console.log(endDt);
+
+    if (formData.tenureType === "week" && selectedDate) {
+      if (!isSunday(selectedDate)) {
+        e.target.value = getNextSunday(selectedDate);
+        setFormData((prev) => ({
+          ...prev,
+          startDate: getNextSunday(selectedDate),
+        }));
+        setMessage({
+          type: "info",
+          text: "Start date automatically adjusted to next Sunday for weekly tenure.",
+        });
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          startDate: selectedDate,
+        }));
+        setMessage({ type: "", text: "" });
+      }
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        startDate: selectedDate,
+      }));
+    }
+  };
+
+  // Function to disable dates in calendar (only for week tenure type)
+  const disableDates = (date) => {
+    if (formData.tenureType === "week") {
+      return !isSunday(date);
+    }
+    return false;
   };
 
   const handleSubmit = async (e) => {
@@ -28,15 +144,41 @@ const CreateUser = ({ setActiveTab }) => {
     setLoading(true);
     setMessage({ type: "", text: "" });
 
+    // Final validation for weekly tenure
+    if (
+      formData.tenureType === "week" &&
+      formData.startDate &&
+      !isSunday(formData.startDate)
+    ) {
+      setMessage({
+        type: "error",
+        text: "Start date must be a Sunday for weekly tenure.",
+      });
+      setLoading(false);
+      return;
+    }
+
+    // Ensure endDate is calculated before submission
+    const submissionData = { ...formData };
+    if (submissionData.startDate && submissionData.tenure) {
+      submissionData.endDate = calculateEndDate(
+        submissionData.startDate,
+        submissionData.tenure,
+        submissionData.tenureType
+      );
+    }
+
     try {
-      const response = await userPaymentAPI.create(formData);
+      const response = await userPaymentAPI.create(submissionData);
 
       if (response.data.success) {
         setMessage({
           type: "success",
           text: "User created successfully! Redirecting to users list...",
         });
-        setActiveTab("users");
+        setTimeout(() => {
+          setActiveTab("users");
+        }, 2000);
         setFormData({
           memberName: "",
           aadharNumber: "",
@@ -46,6 +188,7 @@ const CreateUser = ({ setActiveTab }) => {
           tenure: "",
           tenureType: "week",
           startDate: new Date().toISOString().split("T")[0],
+          reference: "",
         });
       }
     } catch (error) {
@@ -132,16 +275,28 @@ const CreateUser = ({ setActiveTab }) => {
             className={`mx-8 mt-6 p-4 rounded-xl border ${
               message.type === "success"
                 ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                : "bg-red-50 border-red-200 text-red-700"
+                : message.type === "error"
+                ? "bg-red-50 border-red-200 text-red-700"
+                : "bg-blue-50 border-blue-200 text-blue-700"
             }`}
           >
             <div className="flex items-center space-x-3">
               <div
                 className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                  message.type === "success" ? "bg-emerald-500" : "bg-red-500"
+                  message.type === "success"
+                    ? "bg-emerald-500"
+                    : message.type === "error"
+                    ? "bg-red-500"
+                    : "bg-blue-500"
                 }`}
               >
-                <span className="text-white text-sm">✓</span>
+                <span className="text-white text-sm">
+                  {message.type === "success"
+                    ? "✓"
+                    : message.type === "error"
+                    ? "!"
+                    : "i"}
+                </span>
               </div>
               <span className="font-medium">{message.text}</span>
             </div>
@@ -205,6 +360,20 @@ const CreateUser = ({ setActiveTab }) => {
                   maxLength="10"
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300 bg-white hover:border-gray-400"
                   placeholder="10-digit phone number"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">
+                  Reference
+                </label>
+                <input
+                  type="text"
+                  name="reference"
+                  value={formData.reference}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300 bg-white hover:border-gray-400"
+                  placeholder="Reference person or source"
                 />
               </div>
             </div>
@@ -299,17 +468,59 @@ const CreateUser = ({ setActiveTab }) => {
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-700">
                   Start Date <span className="text-emerald-500">*</span>
+                  {formData.tenureType === "week" && (
+                    <span className="text-blue-600 text-xs ml-2">
+                      (Sundays only)
+                    </span>
+                  )}
                 </label>
                 <input
                   type="date"
                   name="startDate"
                   value={formData.startDate}
-                  onChange={handleChange}
+                  onChange={handleDateInput}
+                  onInput={handleDateInput}
                   required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300 bg-white hover:border-gray-400"
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300 bg-white hover:border-gray-400 ${
+                    formData.tenureType === "week"
+                      ? "border-blue-300 bg-blue-50"
+                      : "border-gray-300"
+                  }`}
+                  title={
+                    formData.tenureType === "week"
+                      ? "Only Sundays are allowed for weekly tenure"
+                      : "Select start date"
+                  }
                 />
+                {formData.tenureType === "week" && formData.startDate && (
+                  <p className="text-xs text-blue-600 mt-1">
+                    {isSunday(formData.startDate)
+                      ? "✓ Selected date is a Sunday"
+                      : "⚠ Date will be adjusted to next Sunday"}
+                  </p>
+                )}
               </div>
             </div>
+
+            {/* Display Calculated End Date */}
+            {formData.endDate && (
+              <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200">
+                <div className="flex items-center space-x-3">
+                  <div className="w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center">
+                    <span className="text-white text-sm">📅</span>
+                  </div>
+                  <div>
+                    <p className="text-emerald-700 font-semibold">
+                      Calculated End Date
+                    </p>
+                    <p className="text-emerald-600">
+                      The chit fund will end on:{" "}
+                      <strong>{formData.endDate}</strong>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Submit Button Section */}
@@ -348,7 +559,9 @@ const CreateUser = ({ setActiveTab }) => {
               <li>• Ensure all required fields marked with * are filled</li>
               <li>• Verify Aadhar and phone numbers before submission</li>
               <li>• Double-check the chit amount and tenure details</li>
-              <li>• Member will be activated immediately after creation</li>
+              <li>• For weekly tenure, start date must be a Sunday</li>
+              <li>• End date is automatically calculated based on tenure</li>
+              <li>• Reference field is optional but recommended</li>
             </ul>
           </div>
         </div>
