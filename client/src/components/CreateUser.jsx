@@ -8,7 +8,7 @@ const CreateUser = ({ setActiveTab }) => {
     phoneNumber: "",
     address: "",
     chitAmount: "",
-    tenure: "",
+    tenure: "12",
     tenureType: "week",
     startDate: new Date().toISOString().split("T")[0],
     reference: "",
@@ -263,9 +263,6 @@ const CreateUser = ({ setActiveTab }) => {
                 Fill in the details below to register a new member
               </p>
             </div>
-            <div className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-sm font-semibold">
-              Required *
-            </div>
           </div>
         </div>
 
@@ -316,14 +313,13 @@ const CreateUser = ({ setActiveTab }) => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-700">
-                  Member Name <span className="text-emerald-500">*</span>
+                  Member Name
                 </label>
                 <input
                   type="text"
                   name="memberName"
                   value={formData.memberName}
                   onChange={handleChange}
-                  required
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300 bg-white hover:border-gray-400"
                   placeholder="Enter full name"
                 />
@@ -331,14 +327,13 @@ const CreateUser = ({ setActiveTab }) => {
 
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-700">
-                  Aadhar Number <span className="text-emerald-500">*</span>
+                  Aadhar Number
                 </label>
                 <input
                   type="text"
                   name="aadharNumber"
                   value={formData.aadharNumber}
                   onChange={handleChange}
-                  required
                   pattern="[0-9]{12}"
                   maxLength="12"
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300 bg-white hover:border-gray-400"
@@ -348,14 +343,13 @@ const CreateUser = ({ setActiveTab }) => {
 
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-700">
-                  Phone Number <span className="text-emerald-500">*</span>
+                  Phone Number
                 </label>
                 <input
                   type="tel"
                   name="phoneNumber"
                   value={formData.phoneNumber}
                   onChange={handleChange}
-                  required
                   pattern="[0-9]{10}"
                   maxLength="10"
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300 bg-white hover:border-gray-400"
@@ -415,28 +409,71 @@ const CreateUser = ({ setActiveTab }) => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-700">
-                  Chit Amount (₹) <span className="text-emerald-500">*</span>
+                  Chit Amount (₹)
                 </label>
                 <div className="relative">
-                  <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 font-semibold">
+                  <span className="absolute left-4 top-8 transform -translate-y-1/2 text-gray-500 font-semibold">
                     ₹
                   </span>
-                  <input
+                  {/* <input
                     type="number"
                     name="chitAmount"
                     value={formData.chitAmount}
                     onChange={handleChange}
-                    required
                     min="1000"
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300 bg-white hover:border-gray-400"
                     placeholder="50000"
-                  />
+                  /> */}
+                  {/* SELECT BOX */}
+                  <select
+                    name="chitAmount"
+                    value={formData.chitAmountType || ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+
+                      setFormData((prev) => ({
+                        ...prev,
+                        chitAmountType: value, // stores selected option
+                        chitAmount: value !== "custom" ? value : "", // reset if custom
+                      }));
+                    }}
+                    className="w-full pl-3 pr-4 py-3 border border-gray-300 rounded-xl 
+             focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 
+             transition-all duration-300 bg-white hover:border-gray-400"
+                  >
+                    <option value="">Select amount</option>
+                    <option value="6000">6,000</option>
+                    <option value="12000">12,000</option>
+                    <option value="18000">18,000</option>
+                    <option value="24000">24,000</option>
+                    <option value="custom">Custom Amount</option>
+                  </select>
+
+                  {/* SHOW INPUT ONLY WHEN "custom" IS SELECTED */}
+                  {formData.chitAmountType === "custom" && (
+                    <input
+                      type="number"
+                      name="chitAmount"
+                      value={formData.chitAmount}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          chitAmount: e.target.value,
+                        }))
+                      }
+                      min="1000"
+                      className="w-full mt-3 pl-10 pr-4 py-3 border border-gray-300 rounded-xl 
+               focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 
+               transition-all duration-300 bg-white hover:border-gray-400"
+                      placeholder="Enter custom amount"
+                    />
+                  )}
                 </div>
               </div>
 
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-700">
-                  Tenure <span className="text-emerald-500">*</span>
+                  Tenure
                 </label>
                 <div className="flex gap-3">
                   <div className="flex-1">
@@ -445,7 +482,6 @@ const CreateUser = ({ setActiveTab }) => {
                       name="tenure"
                       value={formData.tenure}
                       onChange={handleChange}
-                      required
                       min="1"
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300 bg-white hover:border-gray-400"
                       placeholder="e.g., 12"
@@ -467,7 +503,7 @@ const CreateUser = ({ setActiveTab }) => {
 
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-700">
-                  Start Date <span className="text-emerald-500">*</span>
+                  Start Date
                   {formData.tenureType === "week" && (
                     <span className="text-blue-600 text-xs ml-2">
                       (Sundays only)
@@ -480,7 +516,6 @@ const CreateUser = ({ setActiveTab }) => {
                   value={formData.startDate}
                   onChange={handleDateInput}
                   onInput={handleDateInput}
-                  required
                   className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-300 bg-white hover:border-gray-400 ${
                     formData.tenureType === "week"
                       ? "border-blue-300 bg-blue-50"
@@ -545,26 +580,6 @@ const CreateUser = ({ setActiveTab }) => {
             </button>
           </div>
         </form>
-      </div>
-
-      {/* Quick Tips */}
-      <div className="mt-8 bg-blue-50 rounded-2xl p-6 border border-blue-200">
-        <div className="flex items-start space-x-3">
-          <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-            <span className="text-white text-sm">💡</span>
-          </div>
-          <div>
-            <h4 className="font-semibold text-blue-900 mb-2">Quick Tips</h4>
-            <ul className="text-blue-800 text-sm space-y-1">
-              <li>• Ensure all required fields marked with * are filled</li>
-              <li>• Verify Aadhar and phone numbers before submission</li>
-              <li>• Double-check the chit amount and tenure details</li>
-              <li>• For weekly tenure, start date must be a Sunday</li>
-              <li>• End date is automatically calculated based on tenure</li>
-              <li>• Reference field is optional but recommended</li>
-            </ul>
-          </div>
-        </div>
       </div>
     </div>
   );

@@ -19,6 +19,7 @@ const Dashboard = () => {
     try {
       setLoading(true);
       const response = await userPaymentAPI.getAll();
+      console.log(response);
 
       if (response.data.success) {
         const users = response.data.data;
