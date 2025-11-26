@@ -37,7 +37,7 @@ const CreateUser = ({ setActiveTab }) => {
     const end = new Date(start);
 
     if (tenureType === "week") {
-      end.setDate(start.getDate() + parseInt(tenure) * 7 - 7);
+      end.setDate(start.getDate() + parseInt(tenure) * 7);
     } else if (tenureType === "month") {
       end.setMonth(start.getMonth() + parseInt(tenure) - 1);
     }
