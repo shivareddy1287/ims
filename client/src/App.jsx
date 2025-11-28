@@ -6,6 +6,7 @@ import UserList from "./components/UserList";
 import PaymentHistory from "./components/PaymentHistory";
 import RecordPayment from "./components/RecordPayment";
 import Previews from "./components/Previews";
+import UserUpdate from "./components/UpdateUser";
 
 function App() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -24,6 +25,8 @@ function App() {
         return <PaymentHistory />;
       case "previews":
         return <Previews />;
+      case "AnandMaster":
+        return <UserUpdate />;
       default:
         return <Dashboard />;
     }
