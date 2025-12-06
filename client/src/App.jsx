@@ -75,7 +75,7 @@ function App() {
     <div className="min-h-screen bg-gradient-to-br from-green-400 via-emerald-400 via-lime-400 via-teal-400 via-green-500 via-emerald-500 via-lime-300 via-teal-300 via-green-300 to-green-400">
       {/* Your content */}
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
-      <main className="container mx-auto px-4 py-8">{renderContent()}</main>
+      <main className=" mx-auto px-1 py-1">{renderContent()}</main>
     </div>
 
     // <div

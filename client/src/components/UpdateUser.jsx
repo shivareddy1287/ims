@@ -9,6 +9,7 @@ const UserUpdate = () => {
   const [editFormData, setEditFormData] = useState({});
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -55,6 +56,18 @@ const UserUpdate = () => {
     }));
   };
 
+  const handleDeleteUser = async (id) => {
+    try {
+      setDeleting(true);
+      await userPaymentAPI.delete(id);
+      const filteredUsers = users?.filter((user) => user?._id !== id);
+      setDeleting(false);
+      setUsers(filteredUsers);
+    } catch (error) {
+      setDeleting(false);
+    }
+  };
+
   const handleUpdateUser = async () => {
     if (!selectedUser) return;
 
@@ -93,7 +106,7 @@ const UserUpdate = () => {
   }
 
   return (
-    <div className="space-y-8 p-6">
+    <div className="space-y-8 p-2">
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>
@@ -230,6 +243,13 @@ const UserUpdate = () => {
                         >
                           <span>✏️</span>
                           <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(user?._id)}
+                          className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-all duration-300 hover:scale-105 flex items-center space-x-2 font-semibold"
+                          title="Delete Member"
+                        >
+                          <span>{deleting ? "Deleting" : "Delete"} </span>
                         </button>
                       </div>
                     </td>
