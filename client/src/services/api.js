@@ -9,7 +9,7 @@ const api = axios.create({
     "Content-Type": "application/json",
   },
 });
-
+// s
 export const userPaymentAPI = {
   // Create a new user payment account
   create: (data) => api.post("/user-payments", data),
