@@ -49,11 +49,11 @@ const Navbar = ({ activeTab, setActiveTab }) => {
             <div className="relative">
               <div
                 onClick={handleProfileClick}
-                className="w-10 h-10 bg-gradient-to-r from-emerald-600 to-green-600 rounded-xl flex items-center justify-center shadow-lg border border-emerald-500/30"
+                className="w-10  h-10 bg-gradient-to-r cursor-pointer from-emerald-600 to-green-600 rounded-xl flex items-center justify-center shadow-lg border border-emerald-500/30"
               >
                 <span className="text-white font-bold text-lg">₹</span>
               </div>
-              <div className="absolute -inset-1 bg-emerald-100 rounded-xl blur-sm opacity-50"></div>
+              {/* <div className="absolute -inset-1 bg-emerald-100 rounded-xl blur-sm opacity-50"></div> */}
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900">Anand Funds</h1>
